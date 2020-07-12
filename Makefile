@@ -6,11 +6,7 @@ clean:
 
 TESTS = ""
 test:
-	@cargo test $(TESTS) --offline -- --color=always --nocapture
-
-TESTS = ""
-itest:
-	@cargo test $(TESTS) --offline --lib -- --color=always --test-threads=1 --nocapture
+	@cargo test $(TESTS) --offline -- --color=always --test-threads=1 --nocapture
 
 docs: build
 	@cargo doc --no-deps

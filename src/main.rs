@@ -1,9 +1,13 @@
+#[macro_use]
+#[cfg(test)]
+extern crate lazy_static;
+
 use http::HttpClient;
 use mobc::{Connection, Pool};
 use mobc_postgres::{tokio_postgres, PgConnectionManager};
 use std::convert::Infallible;
 use tokio_postgres::NoTls;
-use warp::{Filter, Rejection};
+use warp::{Filter, Rejection, Reply};
 
 mod db;
 mod error;
@@ -18,6 +22,10 @@ type DBPool = Pool<PgConnectionManager<NoTls>>;
 
 #[tokio::main]
 async fn main() {
+    run().await;
+}
+
+async fn run() {
     let db_pool = db::create_pool().expect("database pool can be created");
     let db_access = db::DBAccess::new(db_pool);
 
@@ -25,15 +33,22 @@ async fn main() {
         .init_db()
         .await
         .expect("database can be initialized");
+    let http_client = http::Client::new();
 
-    run(db_access).await;
+    println!("Server started at localhost:8080");
+    warp::serve(router(http_client, db_access))
+        .run(([0, 0, 0, 0], 8080))
+        .await;
 }
 
-async fn run(db_access: impl db::DBAccessor + Clone + Send + Sync + 'static) {
-    let http_client = http::Client::new();
+fn router(
+    http_client: impl http::HttpClient,
+    db_access: impl db::DBAccessor,
+) -> impl Filter<Extract = impl Reply, Error = Infallible> + Clone {
     let health_route = warp::path("health")
         .and(warp::get())
         .and_then(handler::health_handler);
+
     let todo = warp::path("todo");
     let todo_routes = todo
         .and(warp::get())
@@ -45,24 +60,19 @@ async fn run(db_access: impl db::DBAccessor + Clone + Send + Sync + 'static) {
             .and(with_db(db_access.clone()))
             .and_then(handler::create_todo));
 
-    let routes = todo_routes
+    todo_routes
         .or(health_route)
-        .recover(error::handle_rejection);
-
-    println!("Server started at localhost:8080");
-    warp::serve(routes).run(([0, 0, 0, 0], 8080)).await;
+        .recover(error::handle_rejection)
 }
 
 fn with_db(
-    db_access: impl db::DBAccessor + Clone + Send + Sync + 'static,
-) -> impl Filter<Extract = (impl db::DBAccessor + Clone + Send + Sync + 'static,), Error = Infallible>
-       + Clone {
+    db_access: impl db::DBAccessor,
+) -> impl Filter<Extract = (impl db::DBAccessor,), Error = Infallible> + Clone {
     warp::any().map(move || db_access.clone())
 }
 
 fn with_http_client(
-    http_client: impl HttpClient + Clone + Send + Sync + 'static,
-) -> impl Filter<Extract = (impl HttpClient + Clone + Send + Sync + 'static,), Error = Infallible> + Clone
-{
+    http_client: impl HttpClient,
+) -> impl Filter<Extract = (impl HttpClient,), Error = Infallible> + Clone {
     warp::any().map(move || http_client.clone())
 }

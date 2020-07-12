@@ -7,10 +7,10 @@ use serde_json::from_slice;
 
 type Result<T> = std::result::Result<T, error::Error>;
 
-const URI: &str = "https://cat-fact.herokuapp.com/facts/random";
+const URI: &str = "https://cat-fact.herokuapp.com";
 
 #[async_trait]
-pub trait HttpClient {
+pub trait HttpClient: Send + Sync + Clone + 'static {
     async fn get_cat_fact(&self) -> Result<String>;
 }
 
@@ -31,6 +31,16 @@ impl Client {
             client: HyperClient::builder().build::<_, Body>(https),
         }
     }
+
+    fn get_url(&self) -> String {
+        #[cfg(not(test))]
+        return URI.to_owned();
+        #[cfg(test)]
+        return match crate::tests::MOCK_HTTP_SERVER.read().unwrap().server {
+            Some(ref v) => v.uri(),
+            None => URI.to_owned(),
+        };
+    }
 }
 
 #[async_trait]
@@ -38,7 +48,7 @@ impl HttpClient for Client {
     async fn get_cat_fact(&self) -> Result<String> {
         let req = Request::builder()
             .method(Method::GET)
-            .uri(URI)
+            .uri(&format!("{}{}", self.get_url(), "/facts/random"))
             .header("content-type", "application/json")
             .header("accept", "application/json")
             .body(Body::empty())?;

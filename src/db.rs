@@ -10,7 +10,7 @@ use tokio_postgres::{Config, Error, NoTls, Row};
 type Result<T> = std::result::Result<T, error::Error>;
 
 #[async_trait]
-pub trait DBAccessor {
+pub trait DBAccessor: Send + Sync + Clone + 'static {
     async fn fetch_todos(&self) -> Result<Vec<Todo>>;
     async fn create_todo(&self, name: String) -> Result<Todo>;
 }
