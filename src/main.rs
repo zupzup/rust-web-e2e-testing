@@ -45,10 +45,6 @@ fn router(
     http_client: impl http::HttpClient,
     db_access: impl db::DBAccessor,
 ) -> impl Filter<Extract = impl Reply, Error = Infallible> + Clone {
-    let health_route = warp::path("health")
-        .and(warp::get())
-        .and_then(handler::health_handler);
-
     let todo = warp::path("todo");
     let todo_routes = todo
         .and(warp::get())
@@ -60,9 +56,7 @@ fn router(
             .and(with_db(db_access.clone()))
             .and_then(handler::create_todo));
 
-    todo_routes
-        .or(health_route)
-        .recover(error::handle_rejection)
+    todo_routes.recover(error::handle_rejection)
 }
 
 fn with_db(

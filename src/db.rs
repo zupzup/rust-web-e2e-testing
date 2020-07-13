@@ -9,6 +9,13 @@ use tokio_postgres::{Config, Error, NoTls, Row};
 
 type Result<T> = std::result::Result<T, error::Error>;
 
+#[derive(Deserialize)]
+pub struct Todo {
+    pub id: i32,
+    pub name: String,
+    pub checked: bool,
+}
+
 #[async_trait]
 pub trait DBAccessor: Send + Sync + Clone + 'static {
     async fn fetch_todos(&self) -> Result<Vec<Todo>>;
@@ -18,13 +25,6 @@ pub trait DBAccessor: Send + Sync + Clone + 'static {
 #[derive(Clone)]
 pub struct DBAccess {
     pub db_pool: DBPool,
-}
-
-#[derive(Deserialize)]
-pub struct Todo {
-    pub id: i32,
-    pub name: String,
-    pub checked: bool,
 }
 
 const INIT_SQL: &str = "./db.sql";

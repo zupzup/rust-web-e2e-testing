@@ -14,14 +14,6 @@ lazy_static! {
 
 // Pure Mock Tests with HTTP client and DB mocked
 #[tokio::test]
-async fn test_health_mock() {
-    let r = router(MockHttpClient {}, MockDBAccessor {});
-    let resp = request().path("/health").reply(&r).await;
-    assert_eq!(resp.status(), 200);
-    assert_eq!(resp.body(), "OK");
-}
-
-#[tokio::test]
 async fn test_list_todos_mock() {
     let r = router(MockHttpClient {}, MockDBAccessor {});
     let resp = request().path("/todo").reply(&r).await;

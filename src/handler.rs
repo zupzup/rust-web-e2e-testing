@@ -23,10 +23,6 @@ impl TodoResponse {
     }
 }
 
-pub async fn health_handler() -> Result<impl Reply> {
-    Ok("OK")
-}
-
 pub async fn list_todos_handler(db_access: impl DBAccessor) -> Result<impl Reply> {
     let todos = db_access
         .fetch_todos()
